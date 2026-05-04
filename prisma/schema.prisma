@@ -1,0 +1,326 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  password        String
+  role            String    @default("member")
+  points          Int       @default(0)
+  isVerified      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  banned          Boolean   @default(false)
+
+  // العلاقات (Relations)
+  profile          Profile?
+  skills           UserSkill[]
+  projects         ProjectMember[]
+  ownedProjects    Project[]           @relation("ProjectOwner")
+  ideas            Idea[]
+  events           EventRegistration[]
+  sentMessages     Message[]           @relation("SentMessages")
+  receivedMessages Message[]           @relation("ReceivedMessages")
+  posts            Post[]
+  badges           UserBadge[]
+  services         Service[]           @relation("UserServices")
+  
+  // التصحيح: إضافة علاقة الوظائف لتمكين Prisma من التعرف على postedBy
+  jobs             Job[]               @relation("UserJobs")
+}
+
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  avatar        String?
+  coverImage    String?
+  bio           String?
+  age           Int?
+  gender        String?
+  country       String?
+  city          String?
+  university    String?
+  major         String?
+  degree        String?
+  gradYear      Int?
+  currentStatus String?
+  company       String?
+  jobTitle      String?
+  experience    Int?
+  github        String?
+  facebook      String?
+  instagram     String?
+  linkedin      String?
+  website       String?
+  interests     String[]
+  lookingFor    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Skill {
+  id       String      @id @default(cuid())
+  name     String      @unique
+  category String
+  users    UserSkill[]
+}
+
+model UserSkill {
+  id      String @id @default(cuid())
+  userId  String
+  skillId String
+  level   String @default("beginner")
+  user    User   @relation(fields: [userId], references: [id])
+  skill   Skill  @relation(fields: [skillId], references: [id])
+
+  @@unique([userId, skillId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  field       String
+  codeUrl     String?
+  demoUrl     String?
+  imageUrl    String?
+  progress    Int      @default(0)
+  status      String   @default("active")
+  isApproved  Boolean  @default(false)
+  votes       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownerId String
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members ProjectMember[]
+  comments Comment[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+}
+
+model Idea {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  field       String
+  votes       Int      @default(0)
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+}
+
+model Event {
+  id           String    @id @default(cuid())
+  title        String
+  description  String
+  type         String
+  date         DateTime
+  endDate      DateTime?
+  speaker      String?
+  location     String?
+  isOnline     Boolean   @default(true)
+  streamUrl    String?
+  registerUrl  String?
+  imageUrl     String?
+  maxAttendees Int?
+  createdAt    DateTime  @default(now())
+
+  registrations EventRegistration[]
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  attended  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  title     String
+  content   String
+  category  String
+  tags      String[]
+  views     Int       @default(0)
+  likes     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  authorId String
+  author   User      @relation(fields: [authorId], references: [id])
+  comments Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  postId    String?
+  projectId String?
+  post      Post?    @relation(fields: [postId], references: [id])
+  project   Project? @relation(fields: [projectId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  type       String   @default("text")
+  imageUrl   String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  senderId   String
+  receiverId String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String
+  imageUrl  String?
+  views     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  url         String
+  imageUrl    String?
+  instructor  String?
+  duration    String?
+  level       String   @default("مبتدئ")
+  isFree      Boolean  @default(true)
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  description String
+  location    String?
+  type        String
+  salary      String?
+  url         String?
+  isRemote    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  postedById  String?
+  postedBy    User?    @relation("UserJobs", fields: [postedById], references: [id])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String
+  icon        String
+  condition   String
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+model Competition {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  prize       String?
+  status      String   @default("upcoming")
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model AITool {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  url         String
+  imageUrl    String?
+  isFree      Boolean  @default(true)
+  pricing     String?
+  createdAt   DateTime @default(now())
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  type      String   @default("EMAIL_VERIFY")
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Service {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  category     String
+  price        String?
+  deliveryTime String?
+  contactInfo  String?
+  createdAt    DateTime @default(now())
+
+  providerId   String
+  provider     User     @relation("UserServices", fields: [providerId], references: [id])
+}
