@@ -1,6 +1,6 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react' // ✳️ تم حذف Suspense
+import { useRouter } from 'next/navigation' // ✳️ تم حذف useSearchParams
 import Link from 'next/link'
 
 export default function VerifyEmailPage() {
@@ -12,8 +12,15 @@ export default function VerifyEmailPage() {
   const [countdown, setCountdown] = useState(0)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const email = searchParams.get('email') || ''
+
+  // ✳️ 2) التعديل المطلوب: إضافة state للإيميل بدلاً من searchParams
+  const [email, setEmail] = useState('')
+
+  // ✳️ 3) إضافة useEffect تحت الـ states مباشرة لجلب الإيميل من الرابط
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setEmail(params.get('email') || '')
+  }, [])
 
   // Countdown timer
   useEffect(() => {
@@ -23,12 +30,13 @@ export default function VerifyEmailPage() {
     }
   }, [countdown])
 
-  // إرسال OTP تلقائياً عند فتح الصفحة
+  // إرسال OTP تلقائياً عند فتح الصفحة وتوفر الإيميل
   useEffect(() => {
     if (email) handleSendOTP()
-  }, [])
+  }, [email]) // يتم التفعيل بمجرد تحديث قيمة email من الـ useEffect الأول
 
   const handleSendOTP = async () => {
+    if (!email) return 
     setSending(true)
     setError('')
     try {
@@ -124,7 +132,8 @@ export default function VerifyEmailPage() {
            }}>
         <div className="text-center">
           <div className="relative mx-auto mb-6 w-28 h-28">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-indigo-600 
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 
+                            to-indigo-600 
                             rounded-full animate-ping opacity-20"></div>
             <div className="relative w-28 h-28 bg-gradient-to-br from-violet-600 to-indigo-600 
                             rounded-full flex items-center justify-center
@@ -132,7 +141,7 @@ export default function VerifyEmailPage() {
               <span className="text-5xl">✅</span>
             </div>
           </div>
-          <h2 className="text-3xl font-black text-white mb-3">تم التحقق! </h2>
+          <h2 className="text-3xl font-black text-white mb-3">تم التحقق!</h2>
           <p className="text-gray-400 mb-2">مرحباً بك في SAAIT Platform</p>
           <p className="text-violet-400 text-sm">جاري تحويلك للوحة التحكم...</p>
           <div className="mt-6 flex justify-center gap-1">
@@ -226,7 +235,7 @@ export default function VerifyEmailPage() {
                 <p className="text-violet-400 font-semibold text-sm
                               bg-violet-500/10 border border-violet-500/20
                               rounded-lg px-3 py-1 inline-block">
-                  📧 {email}
+                  📧 {email || 'جاري التحميل...'}
                 </p>
               </div>
             )}
@@ -334,8 +343,7 @@ export default function VerifyEmailPage() {
                         rounded-2xl p-4 flex items-center gap-3">
           <span className="text-amber-400 text-xl"></span>
           <p className="text-amber-400/70 text-xs leading-relaxed">
-            لا تشارك هذا الرمز مع أي شخص.
-            فريق SAAIT لن يطلبه منك أبداً.
+            لا تشارك هذا الرمز مع أي شخص. فريق SAAIT لن يطلبه منك أبداً.
           </p>
         </div>
 
