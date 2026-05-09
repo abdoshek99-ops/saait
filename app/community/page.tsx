@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 
@@ -7,6 +7,52 @@ const CATEGORIES = ['الكل', 'الذكاء الاصطناعي', 'الأمن �
 const SKILLS_FILTER = ['الكل', 'Python', 'JavaScript', 'Machine Learning', 'Deep Learning', 'Cyber Security', 'Data Science', 'React', 'Node.js']
 const COUNTRIES_FILTER = ['الكل', 'سوريا', 'مصر', 'السعودية', 'الإمارات', 'الأردن', 'لبنان', 'العراق', 'تونس', 'المغرب']
 const STATUS_LABELS: any = { student: 'طالب', graduate: 'خريج', employed: 'موظف', freelancer: 'مستقل', researcher: 'باحث' }
+
+const menuItems = [
+  { href: '/dashboard', label: 'الرئيسية' },
+  { href: '/projects', label: 'المشاريع' },
+  { href: '/events', label: 'الفعاليات' },
+  { href: '/community', label: 'المجتمع' },
+  { href: '/news', label: 'الأخبار' },
+]
+
+// ✅ مكون رفع الصورة
+function ImageUploader({ value, onChange }: { value: string; onChange: (base64: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div>
+      <label className="block text-gray-500 text-xs mb-1.5">صورة للموضوع (اختياري)</label>
+      <div onClick={() => fileRef.current?.click()}
+        className="cursor-pointer border-2 border-dashed border-purple-900/40 hover:border-purple-500/60
+                   rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition bg-[#13131f] min-h-[80px]">
+        {value ? (
+          <img src={value} alt="preview" className="w-full max-h-32 object-cover rounded-lg" />
+        ) : (
+          <>
+            <span className="text-2xl">🖼️</span>
+            <p className="text-gray-500 text-xs text-center">اضغط لرفع صورة (حد أقصى 2MB)</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {value && (
+        <button onClick={() => onChange('')} className="text-red-400 text-xs mt-1 hover:text-red-300 transition">
+          ✕ إزالة الصورة
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function CommunityPage() {
   const { data: session } = useSession()
@@ -19,17 +65,9 @@ export default function CommunityPage() {
   const [countryFilter, setCountryFilter] = useState('الكل')
   const [memberSearch, setMemberSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ title: '', content: '', category: 'عام' })
+  const [form, setForm] = useState({ title: '', content: '', category: 'عام', image: '' })
   const [submitting, setSubmitting] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  const menuItems = [
-    { href: '/dashboard', icon: '', label: 'الرئيسية' },
-    { href: '/projects', icon: '', label: 'المشاريع' },
-    { href: '/events', icon: '', label: 'الفعاليات' },
-    { href: '/community', icon: '', label: 'المجتمع' },
-    { href: '/news', icon: '', label: 'الأخبار' },
-  ]
 
   useEffect(() => {
     if (activeTab === 'forum') fetchPosts()
@@ -65,7 +103,7 @@ export default function CommunityPage() {
       body: JSON.stringify(form),
     })
     if (res.ok) {
-      setForm({ title: '', content: '', category: 'عام' })
+      setForm({ title: '', content: '', category: 'عام', image: '' })
       setShowForm(false)
       fetchPosts()
     }
@@ -101,7 +139,6 @@ export default function CommunityPage() {
             {menuItems.map((item, i) => (
               <Link key={i} href={item.href} onClick={() => setSidebarOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-purple-900/20 transition">
-                <span className="text-xl">{item.icon}</span>
                 <span className="font-medium">{item.label}</span>
               </Link>
             ))}
@@ -109,60 +146,51 @@ export default function CommunityPage() {
         </div>
       </aside>
 
-      {/* Navbar - نفس التصميم الاحترافي من Dashboard */}
-<nav className="border-b border-purple-900/40 bg-[#080810]/80 backdrop-blur sticky top-0 z-50">
-  <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      {/* Navbar */}
+      <nav className="border-b border-purple-900/40 bg-[#080810]/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L3 7L12 12L21 7L12 2Z" stroke="white" strokeWidth="1.5"/>
+                <path d="M3 17L12 22L21 17" stroke="white" strokeWidth="1.5"/>
+                <path d="M3 12L12 17L21 12" stroke="white" strokeWidth="1.5"/>
+              </svg>
+            </div>
+            <div>
+              <span className="font-bold text-white text-sm">SAAIT</span>
+              <p className="text-purple-400 text-xs">Building Syria's Tech Future</p>
+            </div>
+          </div>
 
-    {/* Logo + Name (يمين) */}
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L3 7L12 12L21 7L12 2Z" stroke="white" strokeWidth="1.5"/>
-          <path d="M3 17L12 22L21 17" stroke="white" strokeWidth="1.5"/>
-          <path d="M3 12L12 17L21 12" stroke="white" strokeWidth="1.5"/>
-        </svg>
-      </div>
+          <div className="hidden lg:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+            {menuItems.map((item) => {
+              const active = item.href === '/community'
+              return (
+                <Link key={item.href} href={item.href}
+                  className={`relative px-6 py-2 rounded-lg text-sm transition ${active ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-purple-900/20'}`}>
+                  {item.label}
+                  {active && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-[2px] bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"></span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
 
-      <div>
-        <span className="font-bold text-white text-sm">SAAIT</span>
-        <p className="text-purple-400 text-xs">Building Syria's Tech Future</p>
-      </div>
-    </div>
-
-    {/* Center Menu */}
-    <div className="hidden lg:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-      {menuItems.map((item) => {
-        const active = item.href === '/community'
-        return (
-          <Link 
-            key={item.href} 
-            href={item.href}
-            className={`relative px-6 py-2 rounded-lg text-sm transition
-              ${active ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-purple-900/20'}`}
-          >
-            {item.label}
-            {active && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-[2px] bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"></span>
+          <div className="flex items-center gap-3">
+            {session && activeTab === 'forum' && (
+              <button onClick={() => setShowForm(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-sm px-4 py-2 rounded-lg transition">
+                + نشر موضوع
+              </button>
             )}
-          </Link>
-        )
-      })}
-    </div>
-
-    {/* Right Side */}
-    <div className="flex items-center gap-3">
-      {session && activeTab === 'forum' && (
-        <button 
-          onClick={() => setShowForm(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-sm px-4 py-2 rounded-lg"
-        >
-          + نشر موضوع
-        </button>
-      )}
-    </div>
-
-  </div>
-</nav>
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-400 hover:text-white">
+              ☰
+            </button>
+          </div>
+        </div>
+      </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
 
@@ -190,6 +218,7 @@ export default function CommunityPage() {
           <div className="flex gap-6">
             <div className="flex-1">
 
+              {/* ✅ فورم نشر موضوع مع رفع صورة */}
               {showForm && (
                 <div className="bg-[#0a0a12] border border-purple-700/50 rounded-2xl p-6 mb-6">
                   <h3 className="text-white font-bold mb-4">نشر موضوع جديد</h3>
@@ -200,6 +229,13 @@ export default function CommunityPage() {
                     <textarea value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
                       rows={4} className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none resize-none"
                       placeholder="اكتب موضوعك هنا..." />
+
+                    {/* ✅ رفع صورة الموضوع */}
+                    <ImageUploader
+                      value={form.image}
+                      onChange={(base64) => setForm(p => ({ ...p, image: base64 }))}
+                    />
+
                     <div className="flex flex-wrap gap-2">
                       {CATEGORIES.filter(c => c !== 'الكل').map(c => (
                         <button key={c} onClick={() => setForm(p => ({ ...p, category: c }))}
@@ -249,10 +285,16 @@ export default function CommunityPage() {
               ) : (
                 <div className="space-y-4">
                   {posts.map((post: any) => (
-                    <div key={post.id} className="bg-[#0a0a12] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl p-6 transition">
+                    // ✅ كل الموضوع قابل للضغط ويفتح الصفحة الكاملة
+                    <Link key={post.id} href={`/community/${post.id}`}
+                      className="block bg-[#0a0a12] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl p-6 transition cursor-pointer">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                          {post.author?.name?.charAt(0)}
+                          {post.author?.image ? (
+                            <img src={post.author.image} alt="" className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            post.author?.name?.charAt(0)
+                          )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
@@ -268,21 +310,23 @@ export default function CommunityPage() {
                             {post.category}
                           </span>
                           <h3 className="text-white font-bold text-lg mb-2">{post.title}</h3>
+
+                          {/* ✅ صورة الموضوع إن وجدت */}
+                          {post.image && (
+                            <img src={post.image} alt={post.title}
+                              className="w-full max-h-48 object-cover rounded-xl mb-3 border border-purple-900/20" />
+                          )}
+
                           <p className="text-gray-400 text-sm leading-relaxed line-clamp-3">{post.content}</p>
                           <div className="flex items-center gap-4 mt-4 text-gray-500 text-sm">
-                            <button className="hover:text-purple-400 transition flex items-center gap-1">
-                              <span>👍</span><span>{post.likes}</span>
-                            </button>
-                            <button className="hover:text-purple-400 transition flex items-center gap-1">
-                              <span>💬</span><span>{post._count?.comments} تعليق</span>
-                            </button>
-                            <button className="hover:text-purple-400 transition flex items-center gap-1">
-                              <span>👁</span><span>{post.views} مشاهدة</span>
-                            </button>
+                            <span className="flex items-center gap-1">👍 {post.likes || 0}</span>
+                            <span className="flex items-center gap-1">💬 {post._count?.comments || 0} تعليق</span>
+                            <span className="flex items-center gap-1">👁 {post.views || 0} مشاهدة</span>
+                            <span className="text-purple-400 text-xs mr-auto">اقرأ المزيد ←</span>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -308,7 +352,6 @@ export default function CommunityPage() {
         {/* Members Tab */}
         {activeTab === 'members' && (
           <div>
-            {/* Filters */}
             <div className="bg-[#0a0a12] border border-gray-800/80 rounded-2xl p-4 mb-6">
               <div className="relative mb-4">
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
@@ -351,11 +394,16 @@ export default function CommunityPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredMembers.map((member: any) => (
+                  // ✅ رابط العضو يذهب لصفحة الملف الشخصي الصحيحة
                   <Link key={member.id} href={`/profile/${member.id}`}
                     className="bg-[#0a0a12] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl p-5 transition group">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-700 to-purple-900 flex items-center justify-center text-lg font-bold flex-shrink-0">
-                        {member.name?.charAt(0)}
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-700 to-purple-900 flex items-center justify-center text-lg font-bold flex-shrink-0 overflow-hidden">
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} className="w-12 h-12 object-cover" />
+                        ) : (
+                          member.name?.charAt(0)
+                        )}
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-white font-semibold truncate group-hover:text-purple-400 transition">{member.name}</p>
@@ -392,11 +440,8 @@ export default function CommunityPage() {
                     )}
 
                     <div className="flex items-center justify-between pt-3 border-t border-gray-800/50">
-                      <div className="flex items-center gap-3 text-gray-600 text-xs">
-                        <span>🚀 {member._count?.ownedProjects || 0}</span>
-                        <span>💬 {member._count?.posts || 0}</span>
-                      </div>
-                      <span className="text-yellow-500 text-xs font-medium">⭐ {member.points}</span>
+                      <span className="text-gray-600 text-xs">{member._count?.projects || 0} مشروع</span>
+                      <span className="text-purple-400 text-xs group-hover:text-purple-300 transition">عرض الملف ←</span>
                     </div>
                   </Link>
                 ))}
@@ -404,6 +449,7 @@ export default function CommunityPage() {
             )}
           </div>
         )}
+
       </div>
     </div>
   )

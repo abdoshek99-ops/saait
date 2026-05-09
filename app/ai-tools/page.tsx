@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 
@@ -14,6 +14,49 @@ const CATEGORY_ICONS: any = {
   'برمجة': '💻',
   'صوت وفيديو': '🎬',
   'أخرى': '🔧',
+}
+
+// ✅ مكون رفع الصورة من الجهاز
+function ImageUploader({ value, onChange }: { value: string; onChange: (base64: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('حجم الصورة يجب أن يكون أقل من 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1.5 font-medium">صورة الأداة</label>
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="cursor-pointer border-2 border-dashed border-violet-900/40 hover:border-violet-500/60
+                   rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition
+                   bg-[#0d0d1a] min-h-[100px]">
+        {value ? (
+          <img src={value} alt="preview" className="w-full max-h-32 object-cover rounded-lg" />
+        ) : (
+          <>
+            <span className="text-3xl">🖼️</span>
+            <p className="text-gray-500 text-xs text-center">اضغط لرفع صورة من جهازك<br />(الحد الأقصى 2MB)</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {value && (
+        <button onClick={() => onChange('')} className="text-red-400 text-xs mt-1 hover:text-red-300 transition">
+          ✕ إزالة الصورة
+        </button>
+      )}
+    </div>
+  )
 }
 
 export default function AIToolsPage() {
@@ -161,11 +204,13 @@ export default function AIToolsPage() {
                   {CATEGORIES.filter(c => c !== 'الكل').map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1.5 font-medium">رابط الصورة</label>
-                <input value={form.imageUrl} onChange={e => update('imageUrl', e.target.value)}
-                  className={inputClass} placeholder="https://..." />
-              </div>
+
+              {/* ✅ رفع الصورة من الجهاز بدل رابط */}
+              <ImageUploader
+                value={form.imageUrl}
+                onChange={(base64) => update('imageUrl', base64)}
+              />
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1.5 font-medium">
                   السعر / خطة الاشتراك
@@ -257,7 +302,6 @@ export default function AIToolsPage() {
                            transition-all duration-300
                            hover:shadow-[0_0_20px_rgba(124,58,237,0.08)] group">
 
-                {/* Image */}
                 {tool.imageUrl ? (
                   <div className="relative">
                     <img src={tool.imageUrl} alt={tool.name}
@@ -296,8 +340,7 @@ export default function AIToolsPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-white font-black text-lg mb-1
-                                  group-hover:text-violet-400 transition">
+                  <h3 className="text-white font-black text-lg mb-1 group-hover:text-violet-400 transition">
                     {tool.name}
                   </h3>
 
@@ -310,12 +353,11 @@ export default function AIToolsPage() {
                   </p>
 
                   {tool.addedBy && (
-                    <p className="text-gray-700 text-xs mb-3">
-                      أضافها: {tool.addedBy.name}
-                    </p>
+                    <p className="text-gray-700 text-xs mb-3">أضافها: {tool.addedBy.name}</p>
                   )}
 
-                  <a href={tool.url} target="_blank" rel="noopener noreferrer"
+                  <a href={tool.url.startsWith('http') ? tool.url : `https://${tool.url}`}
+                    target="_blank" rel="noopener noreferrer"
                     className="block w-full bg-gradient-to-r from-violet-600 to-indigo-600
                                hover:from-violet-500 hover:to-indigo-500
                                text-white text-sm font-bold py-3 rounded-xl

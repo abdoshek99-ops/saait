@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -10,62 +10,80 @@ const FIELDS = [
   'الحوسبة السحابية', 'البلوكتشين', 'تطوير الويب', 'إنترنت الأشياء'
 ]
 
+// ✅ مكون رفع الصورة
+function ImageUploader({ value, onChange }: { value: string; onChange: (base64: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1.5 font-medium">
+        صورة المشروع <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+      </label>
+      <div onClick={() => fileRef.current?.click()}
+        className="cursor-pointer border-2 border-dashed border-violet-900/40 hover:border-violet-500/60
+                   rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition
+                   bg-[#0d0d1a] min-h-[100px]">
+        {value ? (
+          <img src={value} alt="preview" className="w-full max-h-40 object-cover rounded-lg" />
+        ) : (
+          <>
+            <span className="text-3xl">🖼️</span>
+            <p className="text-gray-500 text-xs text-center">اضغط لرفع صورة من جهازك<br />(الحد الأقصى 2MB)</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {value && (
+        <button onClick={() => onChange('')} className="text-red-400 text-xs mt-1 hover:text-red-300 transition">
+          ✕ إزالة الصورة
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function NewProjectPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [error, setError] = useState('')
   const [form, setForm] = useState({
-    title: '', description: '', field: '', codeUrl: '', demoUrl: '',
+    title: '', description: '', field: '',
+    codeUrl: '', demoUrl: '', imageUrl: '',
   })
 
-  const update = (key: string, value: string) =>
-    setForm(p => ({ ...p, [key]: value }))
+  const update = (key: string, value: string) => setForm(p => ({ ...p, [key]: value }))
 
   const handleSubmit = async () => {
     setError('')
-
     if (status === 'loading') return
-
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
+    if (!session) { router.push('/login'); return }
     if (!form.title.trim() || !form.description.trim() || !form.field) {
-      setError('العنوان والوصف والمجال مطلوبة')
-      return
+      setError('العنوان والوصف والمجال مطلوبة'); return
     }
-
-    if (form.title.trim().length < 5) {
-      setError('عنوان المشروع يجب أن يكون 5 أحرف على الأقل')
-      return
-    }
-
-    if (form.description.trim().length < 20) {
-      setError('وصف المشروع يجب أن يكون 20 حرفاً على الأقل')
-      return
-    }
+    if (form.title.trim().length < 5) { setError('عنوان المشروع يجب أن يكون 5 أحرف على الأقل'); return }
+    if (form.description.trim().length < 20) { setError('وصف المشروع يجب أن يكون 20 حرفاً على الأقل'); return }
 
     setLoading(true)
-
     try {
       const res = await fetch('/api/projects', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(form),
+        body: JSON.stringify(form),
       })
-
       const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'حدث خطأ أثناء النشر')
-        return
-      }
-
+      if (!res.ok) { setError(data.error || 'حدث خطأ أثناء النشر'); return }
       router.push(`/projects/${data.id}`)
-    } catch (err) {
-      console.error(err)
+    } catch {
       setError('حدث خطأ في الاتصال بالخادم')
     } finally {
       setLoading(false)
@@ -74,11 +92,8 @@ export default function NewProjectPage() {
 
   return (
     <div className="min-h-screen bg-[#050508] text-white" dir="rtl"
-      style={{
-        backgroundImage: `radial-gradient(ellipse at top right, rgba(124,58,237,0.06) 0%, transparent 60%)`
-      }}>
+      style={{ backgroundImage: `radial-gradient(ellipse at top right, rgba(124,58,237,0.06) 0%, transparent 60%)` }}>
 
-      {/* Navbar */}
       <nav className="border-b border-violet-900/20 bg-[#08080f]/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -87,8 +102,7 @@ export default function NewProjectPage() {
                             shadow-[0_0_15px_rgba(124,58,237,0.3)]">⚡</div>
             <span className="font-black text-white tracking-widest hidden sm:block">SAAIT</span>
           </Link>
-          <Link href="/projects"
-            className="text-gray-400 hover:text-white transition text-sm flex items-center gap-1">
+          <Link href="/projects" className="text-gray-400 hover:text-white transition text-sm">
             ← العودة للمشاريع
           </Link>
         </div>
@@ -96,7 +110,6 @@ export default function NewProjectPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-violet-600/20 to-indigo-600/20
                           border-2 border-violet-500/30 rounded-2xl
@@ -106,11 +119,9 @@ export default function NewProjectPage() {
           <p className="text-gray-500">شارك مشروعك مع مجتمع SAAIT التقني</p>
         </div>
 
-        {/* Form Card */}
         <div className="bg-[#0a0a16] border border-violet-900/20 rounded-3xl p-7 space-y-5
                         shadow-[0_0_40px_rgba(124,58,237,0.06)]">
 
-          {/* شريط علوي */}
           <div className="h-0.5 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600
                           -mt-7 mb-7 -mx-7 rounded-t-3xl"></div>
 
@@ -119,16 +130,13 @@ export default function NewProjectPage() {
             <label className="block text-gray-400 text-sm mb-1.5 font-medium">
               اسم المشروع <span className="text-red-400">*</span>
             </label>
-            <input
-              value={form.title}
-              onChange={e => update('title', e.target.value)}
+            <input value={form.title} onChange={e => update('title', e.target.value)}
               className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
                          border border-violet-900/30 focus:border-violet-500
                          focus:outline-none focus:ring-1 focus:ring-violet-500/20
                          transition placeholder-gray-700"
               placeholder="مثال: نظام ذكاء اصطناعي لتشخيص الأمراض"
-              maxLength={100}
-            />
+              maxLength={100} />
             <p className="text-gray-700 text-xs mt-1">{form.title.length}/100</p>
           </div>
 
@@ -137,17 +145,14 @@ export default function NewProjectPage() {
             <label className="block text-gray-400 text-sm mb-1.5 font-medium">
               وصف المشروع <span className="text-red-400">*</span>
             </label>
-            <textarea
-              value={form.description}
-              onChange={e => update('description', e.target.value)}
+            <textarea value={form.description} onChange={e => update('description', e.target.value)}
               rows={5}
               className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
                          border border-violet-900/30 focus:border-violet-500
                          focus:outline-none focus:ring-1 focus:ring-violet-500/20
                          transition resize-none placeholder-gray-700"
               placeholder="اشرح فكرة مشروعك، أهدافه، والتقنيات المستخدمة..."
-              maxLength={1000}
-            />
+              maxLength={1000} />
             <p className={`text-xs mt-1 ${form.description.length < 20 && form.description.length > 0 ? 'text-red-400' : 'text-gray-700'}`}>
               {form.description.length}/1000 {form.description.length < 20 && form.description.length > 0 && '(20 حرف كحد أدنى)'}
             </p>
@@ -172,39 +177,36 @@ export default function NewProjectPage() {
             </div>
           </div>
 
+          {/* ✅ رفع صورة المشروع */}
+          <ImageUploader
+            value={form.imageUrl}
+            onChange={(base64) => update('imageUrl', base64)}
+          />
+
           {/* روابط */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                رابط GitHub
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                رابط GitHub <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
-              <input
-                value={form.codeUrl}
-                onChange={e => update('codeUrl', e.target.value)}
+              <input value={form.codeUrl} onChange={e => update('codeUrl', e.target.value)}
                 className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
                            border border-violet-900/30 focus:border-violet-500
                            focus:outline-none transition placeholder-gray-700 text-sm"
-                placeholder="https://github.com/..."
-              />
+                placeholder="https://github.com/..." />
             </div>
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                رابط Demo
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                رابط Demo <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
-              <input
-                value={form.demoUrl}
-                onChange={e => update('demoUrl', e.target.value)}
+              <input value={form.demoUrl} onChange={e => update('demoUrl', e.target.value)}
                 className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
                            border border-violet-900/30 focus:border-violet-500
                            focus:outline-none transition placeholder-gray-700 text-sm"
-                placeholder="https://myproject.com"
-              />
+                placeholder="https://myproject.com" />
             </div>
           </div>
 
-          {/* رسالة الخطأ */}
           {error && (
             <div className="bg-red-500/8 border border-red-500/25 text-red-400
                             rounded-xl px-4 py-3 text-sm flex items-center gap-2">
@@ -212,11 +214,8 @@ export default function NewProjectPage() {
             </div>
           )}
 
-          {/* أزرار */}
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleSubmit}
-              disabled={loading || status === 'loading'}
+            <button onClick={handleSubmit} disabled={loading || status === 'loading'}
               className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600
                          hover:from-violet-500 hover:to-indigo-500
                          disabled:opacity-50 disabled:cursor-not-allowed
@@ -224,13 +223,8 @@ export default function NewProjectPage() {
                          hover:shadow-[0_0_20px_rgba(124,58,237,0.4)]
                          flex items-center justify-center gap-2">
               {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  جاري النشر...
-                </>
-              ) : (
-                <>🚀 نشر المشروع</>
-              )}
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> جاري النشر...</>
+              ) : <>🚀 نشر المشروع</>}
             </button>
             <Link href="/projects"
               className="px-6 py-4 border border-violet-900/30 text-gray-400

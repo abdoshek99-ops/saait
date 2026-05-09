@@ -1,9 +1,56 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 
 const CATEGORIES = ['الكل', 'الذكاء الاصطناعي', 'تعلم الآلة', 'الأمن السيبراني', 'البرمجة', 'تحليل البيانات']
+
+const menuItems = [
+  { href: '/dashboard', label: 'الرئيسية' },
+  { href: '/projects', label: 'المشاريع' },
+  { href: '/events', label: 'الفعاليات' },
+  { href: '/community', label: 'المجتمع' },
+  { href: '/news', label: 'الأخبار' },
+]
+
+// ✅ مكون رفع الصورة
+function ImageUploader({ value, onChange }: { value: string; onChange: (base64: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1">صورة الكورس (اختياري)</label>
+      <div onClick={() => fileRef.current?.click()}
+        className="cursor-pointer border-2 border-dashed border-purple-900/40 hover:border-purple-500/60
+                   rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition
+                   bg-[#13131f] min-h-[90px]">
+        {value ? (
+          <img src={value} alt="preview" className="w-full max-h-32 object-cover rounded-lg" />
+        ) : (
+          <>
+            <span className="text-2xl">🖼️</span>
+            <p className="text-gray-500 text-xs text-center">اضغط لرفع صورة (حد أقصى 2MB)</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {value && (
+        <button onClick={() => onChange('')} className="text-red-400 text-xs mt-1 hover:text-red-300 transition">
+          ✕ إزالة الصورة
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function CoursesPage() {
   const { data: session } = useSession()
@@ -12,8 +59,14 @@ export default function CoursesPage() {
   const [category, setCategory] = useState('الكل')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', category: 'الذكاء الاصطناعي', url: '', imageUrl: '', instructor: '', duration: '', level: 'مبتدئ', isFree: true })
+  const [form, setForm] = useState({
+    title: '', description: '', category: 'الذكاء الاصطناعي',
+    url: '', imageUrl: '', instructor: '',
+    duration: '', level: 'مبتدئ', isFree: true
+  })
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   useEffect(() => { fetchCourses() }, [category])
 
@@ -27,38 +80,36 @@ export default function CoursesPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.title || !form.description || !form.url) return
+    setError('')
+    if (!session) { window.location.href = '/login'; return }
+    if (!form.title || !form.description || !form.url) {
+      setError('العنوان والوصف والرابط مطلوبة'); return
+    }
     setSubmitting(true)
-    const res = await fetch('/api/courses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    if (res.ok) {
+    try {
+      const res = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'حدث خطأ'); return }
       setForm({ title: '', description: '', category: 'الذكاء الاصطناعي', url: '', imageUrl: '', instructor: '', duration: '', level: 'مبتدئ', isFree: true })
       setShowForm(false)
+      setSuccess('تمت مشاركة الكورس بنجاح! ✅')
+      setTimeout(() => setSuccess(''), 3000)
       fetchCourses()
-    }
-    setSubmitting(false)
+    } catch { setError('خطأ في الاتصال بالخادم') }
+    finally { setSubmitting(false) }
   }
-
-  const menuItems = [
-    { href: '/dashboard', icon: '', label: 'الرئيسية' },
-    { href: '/projects', icon: '', label: 'المشاريع' },
-    { href: '/events', icon: '', label: 'الفعاليات' },
-    { href: '/community', icon: '', label: 'المجتمع' },
-    { href: '/news', icon: '', label: 'الأخبار' },
-  ]
 
   return (
     <div className="min-h-screen bg-[#050508] text-white" dir="rtl">
 
-      {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/70 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed top-0 right-0 h-full w-72 bg-[#0a0a12] border-l border-purple-900/30 z-50 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} lg:hidden`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-8">
@@ -72,7 +123,6 @@ export default function CoursesPage() {
             {menuItems.map((item, i) => (
               <Link key={i} href={item.href} onClick={() => setSidebarOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-purple-900/20 transition">
-                <span className="text-xl">{item.icon}</span>
                 <span className="font-medium">{item.label}</span>
               </Link>
             ))}
@@ -98,17 +148,24 @@ export default function CoursesPage() {
           <div className="hidden lg:flex items-center gap-1">
             {menuItems.map((item, i) => (
               <Link key={i} href={item.href}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-purple-900/20 transition text-sm">
-                <span>{item.icon}</span><span>{item.label}</span>
+                className="px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-purple-900/20 transition text-sm">
+                {item.label}
               </Link>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            {session?.user?.role === 'admin' && (
-              <button onClick={() => setShowForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition">
-                + إضافة كورس
+            {/* ✅ الزر متاح لكل المستخدمين المسجلين */}
+            {session && (
+              <button onClick={() => setShowForm(!showForm)}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition font-medium">
+                📚 شارك كورساً
               </button>
+            )}
+            {!session && (
+              <Link href="/login"
+                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition">
+                شارك كورساً
+              </Link>
             )}
           </div>
         </div>
@@ -118,13 +175,24 @@ export default function CoursesPage() {
 
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-white mb-1">🎓 التعليم والكورسات</h1>
-          <p className="text-gray-500">أفضل الكورسات التقنية المختارة لك</p>
+          <p className="text-gray-500">أفضل الكورسات التقنية المختارة من مجتمع SAAIT</p>
         </div>
 
-        {/* Add Course Form - Admin Only */}
+        {/* رسالة نجاح */}
+        {success && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400
+                          rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
+            <span>✅</span> {success}
+          </div>
+        )}
+
+        {/* ✅ فورم مشاركة كورس لكل المستخدمين */}
         {showForm && (
-          <div className="bg-[#0d0d18] border border-purple-700/50 rounded-2xl p-6 mb-6">
-            <h3 className="text-white font-bold mb-4">إضافة كورس جديد</h3>
+          <div className="bg-[#0a0a16] border border-purple-700/50 rounded-2xl p-6 mb-6
+                          shadow-[0_0_30px_rgba(124,58,237,0.06)]">
+            <div className="h-0.5 bg-gradient-to-r from-purple-600 via-blue-500 to-purple-600
+                            -mt-6 mb-6 -mx-6 rounded-t-2xl"></div>
+            <h3 className="text-white font-bold text-lg mb-5">📚 مشاركة كورس جديد</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">اسم الكورس *</label>
@@ -136,17 +204,11 @@ export default function CoursesPage() {
                 <label className="block text-gray-400 text-sm mb-1">المدرب</label>
                 <input value={form.instructor} onChange={e => setForm(p => ({ ...p, instructor: e.target.value }))}
                   className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none"
-                  placeholder="اسم المدرب" />
+                  placeholder="اسم المدرب أو المنصة" />
               </div>
               <div>
                 <label className="block text-gray-400 text-sm mb-1">رابط الكورس *</label>
                 <input value={form.url} onChange={e => setForm(p => ({ ...p, url: e.target.value }))}
-                  className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none"
-                  placeholder="https://..." />
-              </div>
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">رابط الصورة</label>
-                <input value={form.imageUrl} onChange={e => setForm(p => ({ ...p, imageUrl: e.target.value }))}
                   className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none"
                   placeholder="https://..." />
               </div>
@@ -172,25 +234,45 @@ export default function CoursesPage() {
                   className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none"
                   placeholder="مثال: 10 ساعات" />
               </div>
-              <div className="flex items-center gap-3 pt-6">
-                <input type="checkbox" id="isFree" checked={form.isFree} onChange={e => setForm(p => ({ ...p, isFree: e.target.checked }))}
+
+              {/* ✅ رفع صورة من الجهاز */}
+              <div className="md:col-span-2">
+                <ImageUploader
+                  value={form.imageUrl}
+                  onChange={(base64) => setForm(p => ({ ...p, imageUrl: base64 }))}
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input type="checkbox" id="isFree" checked={form.isFree}
+                  onChange={e => setForm(p => ({ ...p, isFree: e.target.checked }))}
                   className="w-4 h-4 accent-purple-600" />
-                <label htmlFor="isFree" className="text-gray-400">كورس مجاني</label>
+                <label htmlFor="isFree" className="text-gray-400 text-sm cursor-pointer">🆓 كورس مجاني</label>
               </div>
             </div>
+
             <div className="mt-4">
               <label className="block text-gray-400 text-sm mb-1">وصف الكورس *</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                 rows={3} className="w-full bg-[#13131f] text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-purple-500 focus:outline-none resize-none"
-                placeholder="اكتب وصفاً مختصراً للكورس..." />
+                placeholder="اكتب وصفاً مختصراً للكورس وما ستتعلمه..." />
             </div>
+
+            {error && (
+              <div className="mt-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+                <span>❌</span> {error}
+              </div>
+            )}
+
             <div className="flex gap-3 mt-4">
               <button onClick={handleSubmit} disabled={submitting}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition">
-                {submitting ? 'جاري الإضافة...' : 'إضافة الكورس'}
+                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-lg transition flex items-center gap-2">
+                {submitting ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> جاري المشاركة...</>
+                ) : <>📚 مشاركة الكورس</>}
               </button>
-              <button onClick={() => setShowForm(false)}
-                className="border border-gray-700 text-gray-400 hover:text-white px-6 py-2 rounded-lg transition">
+              <button onClick={() => { setShowForm(false); setError('') }}
+                className="border border-gray-700 text-gray-400 hover:text-white px-6 py-2.5 rounded-lg transition">
                 إلغاء
               </button>
             </div>
@@ -216,12 +298,19 @@ export default function CoursesPage() {
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🎓</div>
             <h3 className="text-xl font-bold text-white mb-2">لا توجد كورسات بعد</h3>
-            <p className="text-gray-600">سيتم إضافة كورسات قريباً</p>
+            <p className="text-gray-600 mb-4">كن أول من يشارك كورساً مفيداً!</p>
+            {session && (
+              <button onClick={() => setShowForm(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl transition font-medium">
+                📚 شارك كورساً الآن
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {courses.map((course: any) => (
-              <div key={course.id} className="bg-[#0d0d18] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl overflow-hidden transition group">
+              <div key={course.id}
+                className="bg-[#0d0d18] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl overflow-hidden transition group">
                 {course.imageUrl ? (
                   <img src={course.imageUrl} alt={course.title} className="w-full h-44 object-cover" />
                 ) : (
@@ -229,10 +318,12 @@ export default function CoursesPage() {
                 )}
                 <div className="p-5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="bg-purple-900/30 text-purple-300 text-xs px-2 py-1 rounded-full border border-purple-700/30">{course.category}</span>
+                    <span className="bg-purple-900/30 text-purple-300 text-xs px-2 py-1 rounded-full border border-purple-700/30">
+                      {course.category}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-1 rounded-full ${course.isFree ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
-                        {course.isFree ? 'مجاني' : 'مدفوع'}
+                        {course.isFree ? '🆓 مجاني' : '💰 مدفوع'}
                       </span>
                       <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded-full">{course.level}</span>
                     </div>
@@ -245,7 +336,11 @@ export default function CoursesPage() {
                   {course.duration && (
                     <p className="text-gray-600 text-xs mb-3">⏱ {course.duration}</p>
                   )}
-                  <a href={course.url} target="_blank"
+                  {course.addedBy && (
+                    <p className="text-gray-700 text-xs mb-3">شارك بواسطة: {course.addedBy.name}</p>
+                  )}
+                  <a href={course.url?.startsWith('http') ? course.url : `https://${course.url}`}
+                    target="_blank" rel="noopener noreferrer"
                     className="block w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2.5 rounded-xl transition text-center">
                     ابدأ الكورس ←
                   </a>

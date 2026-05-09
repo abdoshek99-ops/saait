@@ -33,6 +33,7 @@ model User {
   posts            Post[]
   badges           UserBadge[]
   services         Service[]           @relation("UserServices")
+  comments         Comment[]
   
   // التصحيح: إضافة علاقة الوظائف لتمكين Prisma من التعرف على postedBy
   jobs             Job[]               @relation("UserJobs")
@@ -188,6 +189,8 @@ model Comment {
   projectId String?
   post      Post?    @relation(fields: [postId], references: [id])
   project   Project? @relation(fields: [projectId], references: [id])
+    authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
 }
 
 model Message {

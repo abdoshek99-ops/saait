@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function Navbar() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [notifications, setNotifications] = useState<any[]>([])
   const [messages, setMessages] = useState<any[]>([])
@@ -107,6 +107,31 @@ export default function Navbar() {
     return `${days} يوم`
   }
 
+  // ✅ دالة لعرض صورة أو حرف المستخدم
+  const UserAvatar = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
+    const dimension = size === 'sm' ? 'w-7 h-7 text-sm' : 'w-10 h-10 text-base'
+    if (session?.user?.image) {
+      return (
+        <img
+          src={session.user.image}
+          alt={session.user.name || ''}
+          className={`${dimension} rounded-full object-cover`}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      )
+    }
+    return (
+      <div className={`${dimension} rounded-full bg-purple-700 flex items-center justify-center font-bold text-white`}>
+        {session?.user?.name?.charAt(0).toUpperCase() || '?'}
+      </div>
+    )
+  }
+
+  // ✅ رابط الملف الشخصي آمن — لا يذهب لـ /profile/undefined
+  const profileHref = session?.user?.id ? `/profile/${session.user.id}` : '/dashboard'
+
   return (
     <nav className="border-b border-purple-900/40 bg-[#080810] sticky top-0 z-50" dir="rtl">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
@@ -143,7 +168,9 @@ export default function Navbar() {
             🔍
           </button>
 
-          {session ? (
+          {status === 'loading' ? (
+            <div className="w-8 h-8 rounded-full bg-purple-900/30 animate-pulse" />
+          ) : session ? (
             <>
               {/* Notifications Bell */}
               <div className="relative" ref={notifRef}>
@@ -162,13 +189,11 @@ export default function Navbar() {
                 {showNotif && (
                   <div className="absolute left-0 mt-2 w-96 bg-[#0a0a12] border border-gray-700/80 rounded-2xl shadow-2xl overflow-hidden">
 
-                    {/* Header */}
                     <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
                       <span className="text-white font-bold">الإشعارات والرسائل</span>
                       <button onClick={() => setShowNotif(false)} className="text-gray-500 hover:text-white transition">✕</button>
                     </div>
 
-                    {/* Tabs */}
                     <div className="flex border-b border-gray-800">
                       <button
                         onClick={() => { setActiveNotifTab('notifications'); markNotifAsRead() }}
@@ -192,7 +217,6 @@ export default function Navbar() {
                       </button>
                     </div>
 
-                    {/* Notifications Tab */}
                     {activeNotifTab === 'notifications' && (
                       <div className="max-h-80 overflow-y-auto">
                         {notifications.length === 0 ? (
@@ -224,7 +248,6 @@ export default function Navbar() {
                       </div>
                     )}
 
-                    {/* Messages Tab */}
                     {activeNotifTab === 'messages' && (
                       <div className="max-h-80 overflow-y-auto">
                         {getConversationUsers().length === 0 ? (
@@ -258,7 +281,6 @@ export default function Navbar() {
                       </div>
                     )}
 
-                    {/* Footer */}
                     <div className="px-4 py-3 border-t border-gray-800 grid grid-cols-2 gap-2">
                       <Link href="/messages" onClick={() => setShowNotif(false)}
                         className="bg-[#13131f] hover:bg-gray-800 text-gray-400 hover:text-white text-xs py-2 rounded-xl transition text-center">
@@ -279,16 +301,16 @@ export default function Navbar() {
                 <button
                   onClick={() => { setShowMenu(!showMenu); setShowNotif(false) }}
                   className="flex items-center gap-2 bg-[#13131f] hover:bg-[#1a1a2e] rounded-xl px-2 py-1.5 transition">
-                  <div className="w-7 h-7 rounded-full bg-purple-700 flex items-center justify-center text-sm font-bold">
-                    {session.user?.name?.charAt(0).toUpperCase()}
-                  </div>
+                  {/* ✅ صورة المستخدم أو حرفه */}
+                  <UserAvatar size="sm" />
                   <span className="text-white text-sm hidden md:block">{session.user?.name}</span>
                   <span className="text-gray-400 text-xs">▼</span>
                 </button>
 
                 {showMenu && (
                   <div className="absolute left-0 mt-2 w-52 bg-[#0a0a12] border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
-                    <Link href={`/profile/${session.user?.id}`} onClick={() => setShowMenu(false)}
+                    {/* ✅ رابط آمن لا يذهب لـ /profile/undefined */}
+                    <Link href={profileHref} onClick={() => setShowMenu(false)}
                       className="flex items-center gap-2 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 transition text-sm">
                       👤 الملف الشخصي
                     </Link>

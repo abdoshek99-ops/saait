@@ -8,6 +8,15 @@ const SERVICE_CATEGORIES = ['الكل', 'برمجة وتطوير', 'ذكاء ا�
 
 const inputClass = "w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3 border border-violet-900/30 focus:border-violet-500 focus:outline-none transition placeholder-gray-700 text-sm"
 
+// ✅ دالة تصحيح الروابط
+function fixUrl(url: string): string {
+  if (!url) return ''
+  const trimmed = url.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  if (trimmed.includes('@')) return `mailto:${trimmed}`
+  return `https://${trimmed}`
+}
+
 // ==================== JOB CARD ====================
 function JobCard({ job, currentUserId, isAdmin, onDelete }: any) {
   const [deleting, setDeleting] = useState(false)
@@ -20,6 +29,8 @@ function JobCard({ job, currentUserId, isAdmin, onDelete }: any) {
     onDelete(job.id)
     setDeleting(false)
   }
+
+  const jobUrl = fixUrl(job.url)
 
   return (
     <div className="bg-[#0a0a16] border border-violet-900/15 hover:border-violet-500/30
@@ -76,8 +87,9 @@ function JobCard({ job, currentUserId, isAdmin, onDelete }: any) {
         <span className="text-gray-700 text-xs">
           {new Date(job.createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}
         </span>
-        {job.url ? (
-          <a href={job.url} target="_blank" rel="noopener noreferrer"
+        {/* ✅ زر التقديم مع تصحيح الرابط */}
+        {jobUrl ? (
+          <a href={jobUrl} target="_blank" rel="noopener noreferrer"
             className="bg-gradient-to-r from-violet-600 to-indigo-600
                        hover:from-violet-500 hover:to-indigo-500
                        text-white text-sm font-bold px-5 py-2 rounded-xl
@@ -105,12 +117,16 @@ function ServiceCard({ service, currentUserId, isAdmin, onDelete }: any) {
     setDeleting(false)
   }
 
+  // ✅ تصحيح رابط التواصل
+  const contactUrl = service.contactInfo
+    ? fixUrl(service.contactInfo)
+    : ''
+
   return (
     <div className="bg-[#0a0a16] border border-cyan-900/15 hover:border-cyan-500/30
                     rounded-2xl p-6 transition-all duration-300
                     hover:shadow-[0_0_20px_rgba(6,182,212,0.08)] group">
 
-      {/* Provider Info */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-700
@@ -135,7 +151,6 @@ function ServiceCard({ service, currentUserId, isAdmin, onDelete }: any) {
         )}
       </div>
 
-      {/* Service Info */}
       <h3 className="text-white font-black text-base mb-2">{service.title}</h3>
       <p className="text-gray-500 text-sm line-clamp-3 mb-4 leading-relaxed">
         {service.description}
@@ -162,15 +177,17 @@ function ServiceCard({ service, currentUserId, isAdmin, onDelete }: any) {
         <span className="text-gray-700 text-xs">
           {new Date(service.createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}
         </span>
-        {service.contactInfo && (
-          <a href={service.contactInfo.startsWith('http') ? service.contactInfo : `mailto:${service.contactInfo}`}
-            target="_blank" rel="noopener noreferrer"
+        {/* ✅ زر التواصل مع تصحيح الرابط */}
+        {contactUrl ? (
+          <a href={contactUrl} target="_blank" rel="noopener noreferrer"
             className="bg-gradient-to-r from-cyan-600 to-blue-600
                        hover:from-cyan-500 hover:to-blue-500
                        text-white text-sm font-bold px-5 py-2 rounded-xl
                        transition hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]">
             تواصل الآن ←
           </a>
+        ) : (
+          <span className="text-gray-700 text-xs">لا توجد معلومات تواصل</span>
         )}
       </div>
     </div>
@@ -182,7 +199,6 @@ export default function JobsPage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<'jobs' | 'services'>('jobs')
 
-  // Jobs State
   const [jobs, setJobs] = useState<any[]>([])
   const [jobsLoading, setJobsLoading] = useState(true)
   const [jobType, setJobType] = useState('الكل')
@@ -195,7 +211,6 @@ export default function JobsPage() {
     salary: '', url: '', isRemote: false
   })
 
-  // Services State
   const [services, setServices] = useState<any[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
   const [serviceCategory, setServiceCategory] = useState('الكل')
@@ -231,7 +246,6 @@ export default function JobsPage() {
     setServicesLoading(false)
   }
 
-  // Submit Job
   const handleJobSubmit = async () => {
     setJobError('')
     if (!session) { window.location.href = '/login'; return }
@@ -254,7 +268,6 @@ export default function JobsPage() {
     finally { setJobSubmitting(false) }
   }
 
-  // Submit Service
   const handleServiceSubmit = async () => {
     setServiceError('')
     if (!session) { window.location.href = '/login'; return }
@@ -281,7 +294,6 @@ export default function JobsPage() {
     <div className="min-h-screen bg-[#050508] text-white" dir="rtl"
       style={{ backgroundImage: `radial-gradient(ellipse at top right, rgba(124,58,237,0.06) 0%, transparent 60%), radial-gradient(ellipse at bottom left, rgba(6,182,212,0.04) 0%, transparent 60%)` }}>
 
-      {/* Navbar */}
       <nav className="border-b border-violet-900/20 bg-[#08080f]/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -318,13 +330,11 @@ export default function JobsPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-black text-white mb-2">سوق العمل والخدمات</h1>
           <p className="text-gray-500">ابحث عن فرصة عمل أو اعرض خدماتك التقنية لمجتمع SAAIT</p>
         </div>
 
-        {/* Main Tabs */}
         <div className="flex gap-3 mb-8 justify-center">
           {[
             { id: 'jobs',     label: '💼 فرص العمل',    count: jobs.length,     active: 'from-violet-600 to-indigo-600', shadow: 'rgba(124,58,237,0.3)' },
@@ -344,10 +354,9 @@ export default function JobsPage() {
           ))}
         </div>
 
-        {/* ==================== JOBS TAB ==================== */}
+        {/* JOBS TAB */}
         {activeTab === 'jobs' && (
           <div>
-            {/* Job Form */}
             {showJobForm && (
               <div className="bg-[#0a0a16] border border-violet-900/20 rounded-3xl p-6 mb-6
                               shadow-[0_0_30px_rgba(124,58,237,0.06)]">
@@ -420,7 +429,6 @@ export default function JobsPage() {
               </div>
             )}
 
-            {/* Filter */}
             <div className="flex gap-2 flex-wrap mb-6">
               {JOB_TYPES.map(t => (
                 <button key={t} onClick={() => setJobType(t)}
@@ -432,7 +440,6 @@ export default function JobsPage() {
               ))}
             </div>
 
-            {/* Jobs Grid */}
             {jobsLoading ? (
               <div className="flex justify-center py-20">
                 <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
@@ -461,10 +468,9 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* ==================== SERVICES TAB ==================== */}
+        {/* SERVICES TAB */}
         {activeTab === 'services' && (
           <div>
-            {/* Service Form */}
             {showServiceForm && (
               <div className="bg-[#0a0a16] border border-cyan-900/20 rounded-3xl p-6 mb-6
                               shadow-[0_0_30px_rgba(6,182,212,0.06)]">
@@ -530,7 +536,6 @@ export default function JobsPage() {
               </div>
             )}
 
-            {/* Filter */}
             <div className="flex gap-2 flex-wrap mb-6">
               {SERVICE_CATEGORIES.map(c => (
                 <button key={c} onClick={() => setServiceCategory(c)}
@@ -542,7 +547,6 @@ export default function JobsPage() {
               ))}
             </div>
 
-            {/* Services Grid */}
             {servicesLoading ? (
               <div className="flex justify-center py-20">
                 <div className="w-8 h-8 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin" />

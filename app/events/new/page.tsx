@@ -1,10 +1,51 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 const TYPES = ['هاكاثون', 'ندوة', 'ورشة عمل', 'مؤتمر', 'بث مباشر']
+
+// ✅ مكون رفع الصورة
+function ImageUploader({ value, onChange }: { value: string; onChange: (base64: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert('حجم الصورة يجب أن يكون أقل من 2MB'); return }
+    const reader = new FileReader()
+    reader.onloadend = () => onChange(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div>
+      <label className="block text-gray-400 text-sm mb-1.5 font-medium">
+        صورة الفعالية <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+      </label>
+      <div onClick={() => fileRef.current?.click()}
+        className="cursor-pointer border-2 border-dashed border-emerald-900/40 hover:border-emerald-500/60
+                   rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition
+                   bg-[#0d0d1a] min-h-[100px]">
+        {value ? (
+          <img src={value} alt="preview" className="w-full max-h-40 object-cover rounded-lg" />
+        ) : (
+          <>
+            <span className="text-3xl">🖼️</span>
+            <p className="text-gray-500 text-xs text-center">اضغط لرفع صورة من جهازك<br />(الحد الأقصى 2MB)</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+      {value && (
+        <button onClick={() => onChange('')} className="text-red-400 text-xs mt-1 hover:text-red-300 transition">
+          ✕ إزالة الصورة
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function NewEventPage() {
   const router = useRouter()
@@ -12,33 +53,21 @@ export default function NewEventPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    type: '',
-    date: '',
-    time:'',
-    speaker: '',
-    location: '',
-    isOnline: true,
-    streamUrl: '',
-    registerUrl: '',
-    maxAttendees: '',
+    title: '', description: '', type: '',
+    date: '', time: '', speaker: '',
+    location: '', isOnline: true,
+    streamUrl: '', registerUrl: '',
+    maxAttendees: '', imageUrl: '',
   })
 
-  const update = (key: string, value: any) =>
-    setForm(p => ({ ...p, [key]: value }))
+  const update = (key: string, value: any) => setForm(p => ({ ...p, [key]: value }))
 
   const handleSubmit = async () => {
     setError('')
-
     if (!session) { router.push('/login'); return }
-    if ((session.user as any)?.role !== 'admin') {
-      setError('فقط المدير يمكنه إنشاء فعاليات'); return
-    }
     if (!form.title.trim() || !form.description.trim() || !form.type || !form.date) {
       setError('العنوان والوصف والنوع والتاريخ مطلوبة'); return
     }
-
     setLoading(true)
     try {
       const res = await fetch('/api/events', {
@@ -66,7 +95,6 @@ export default function NewEventPage() {
     <div className="min-h-screen bg-[#050508] text-white" dir="rtl"
       style={{ backgroundImage: `radial-gradient(ellipse at top, rgba(124,58,237,0.06) 0%, transparent 60%)` }}>
 
-      {/* Navbar */}
       <nav className="border-b border-violet-900/20 bg-[#08080f]/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -83,7 +111,6 @@ export default function NewEventPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-emerald-600/20 to-teal-600/20
                           border-2 border-emerald-500/30 rounded-2xl
@@ -143,50 +170,33 @@ export default function NewEventPage() {
             </div>
           </div>
 
-          {/* التاريخ */}
+          {/* ✅ التاريخ والوقت — مصلح */}
           <div>
             <label className="block text-gray-400 text-sm mb-1.5 font-medium">
               تاريخ ووقت الفعالية <span className="text-red-400">*</span>
             </label>
-            {/* التاريخ والوقت */}
-<div>
-  <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-    <span className="text-red-400"></span>
-  </label>
-
-  <div className="grid grid-cols-2 gap-3">
-    
-    {/* التاريخ */}
-    <input
-      type="date"
-      value={form.date}
-      onChange={(e) => update('date', e.target.value)}
-      className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
-      border border-violet-900/30 focus:border-violet-500
-      focus:outline-none transition"
-    />
-
-    {/* الوقت */}
-    <input
-      type="time"
-      value={form.time || ''}
-      onChange={(e) => update('time', e.target.value)}
-      className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
-      border border-violet-900/30 focus:border-violet-500
-      focus:outline-none transition"
-    />
- </div>
-</div>
-              className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
-                         border border-violet-900/30 focus:border-violet-500
-                         focus:outline-none transition" /
+            <div className="grid grid-cols-2 gap-3">
+              <input type="date" value={form.date} onChange={e => update('date', e.target.value)}
+                className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
+                           border border-violet-900/30 focus:border-violet-500
+                           focus:outline-none transition" />
+              <input type="time" value={form.time} onChange={e => update('time', e.target.value)}
+                className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
+                           border border-violet-900/30 focus:border-violet-500
+                           focus:outline-none transition" />
+            </div>
           </div>
+
+          {/* ✅ رفع صورة الفعالية */}
+          <ImageUploader
+            value={form.imageUrl}
+            onChange={(base64) => update('imageUrl', base64)}
+          />
 
           {/* المتحدث */}
           <div>
             <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-              المتحدث / المحاضر
-              <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+              المتحدث / المحاضر <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
             </label>
             <input value={form.speaker} onChange={e => update('speaker', e.target.value)}
               className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
@@ -195,7 +205,7 @@ export default function NewEventPage() {
               placeholder="اسم المتحدث أو المحاضر" />
           </div>
 
-          {/* أونلاين أم حضوري */}
+          {/* نوع الحضور */}
           <div>
             <label className="block text-gray-400 text-sm mb-2 font-medium">نوع الحضور</label>
             <div className="flex gap-3">
@@ -220,8 +230,7 @@ export default function NewEventPage() {
           {form.isOnline ? (
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                رابط البث المباشر
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                رابط البث المباشر <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
               <input value={form.streamUrl} onChange={e => update('streamUrl', e.target.value)}
                 className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
@@ -232,8 +241,7 @@ export default function NewEventPage() {
           ) : (
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                مكان الفعالية
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                مكان الفعالية <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
               <input value={form.location} onChange={e => update('location', e.target.value)}
                 className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
@@ -247,8 +255,7 @@ export default function NewEventPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                رابط التسجيل
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                رابط التسجيل <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
               <input value={form.registerUrl} onChange={e => update('registerUrl', e.target.value)}
                 className="w-full bg-[#0d0d1a] text-white rounded-xl px-4 py-3
@@ -258,8 +265,7 @@ export default function NewEventPage() {
             </div>
             <div>
               <label className="block text-gray-400 text-sm mb-1.5 font-medium">
-                الحد الأقصى للمشاركين
-                <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
+                الحد الأقصى للمشاركين <span className="text-gray-600 text-xs mr-1">(اختياري)</span>
               </label>
               <input type="number" value={form.maxAttendees}
                 onChange={e => update('maxAttendees', e.target.value)}
@@ -270,7 +276,6 @@ export default function NewEventPage() {
             </div>
           </div>
 
-          {/* خطأ */}
           {error && (
             <div className="bg-red-500/8 border border-red-500/25 text-red-400
                             rounded-xl px-4 py-3 text-sm flex items-center gap-2">
@@ -278,7 +283,6 @@ export default function NewEventPage() {
             </div>
           )}
 
-          {/* أزرار */}
           <div className="flex gap-3 pt-2">
             <button onClick={handleSubmit} disabled={loading}
               className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600
