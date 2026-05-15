@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: 'Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' }, { status: 404 })
 
     const body = await req.json()
-    const { title, description, type, date, speaker, location, isOnline, streamUrl, registerUrl, maxAttendees } = body
+    const { title, description, type, date, speaker, location, isOnline, streamUrl, registerUrl, maxAttendees, imageUrl, endDate } = body
 
     if (!title || !description || !type || !date) {
       return NextResponse.json({ error: 'Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© Ù†Ø§Ù‚ØµØ©' }, { status: 400 })
@@ -48,6 +48,8 @@ export async function POST(req: Request) {
         streamUrl:    streamUrl    || null,
         registerUrl:  registerUrl  || null,
         maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
+        imageUrl:     imageUrl     || null,
+        endDate:      endDate      ? new Date(endDate) : null,
       },
     })
 

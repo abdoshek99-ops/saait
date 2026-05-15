@@ -65,7 +65,7 @@ export default function CommunityPage() {
   const [countryFilter, setCountryFilter] = useState('الكل')
   const [memberSearch, setMemberSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ title: '', content: '', category: 'عام', image: '' })
+  const [form, setForm] = useState({ title: '', content: '', category: 'عام', imageUrl: '' })
   const [submitting, setSubmitting] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -103,7 +103,7 @@ export default function CommunityPage() {
       body: JSON.stringify(form),
     })
     if (res.ok) {
-      setForm({ title: '', content: '', category: 'عام', image: '' })
+      setForm({ title: '', content: '', category: 'عام', imageUrl: '' })
       setShowForm(false)
       fetchPosts()
     }
@@ -232,8 +232,8 @@ export default function CommunityPage() {
 
                     {/* ✅ رفع صورة الموضوع */}
                     <ImageUploader
-                      value={form.image}
-                      onChange={(base64) => setForm(p => ({ ...p, image: base64 }))}
+                      value={form.imageUrl}
+                      onChange={(base64) => setForm(p => ({ ...p, imageUrl: base64 }))}
                     />
 
                     <div className="flex flex-wrap gap-2">
@@ -290,8 +290,8 @@ export default function CommunityPage() {
                       className="block bg-[#0a0a12] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl p-6 transition cursor-pointer">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                          {post.author?.image ? (
-                            <img src={post.author.image} alt="" className="w-10 h-10 rounded-full object-cover" />
+                          {post.author?.profile?.avatar ? (
+                            <img src={post.author.profile.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                           ) : (
                             post.author?.name?.charAt(0)
                           )}
@@ -312,8 +312,8 @@ export default function CommunityPage() {
                           <h3 className="text-white font-bold text-lg mb-2">{post.title}</h3>
 
                           {/* ✅ صورة الموضوع إن وجدت */}
-                          {post.image && (
-                            <img src={post.image} alt={post.title}
+                          {post.imageUrl && (
+                            <img src={post.imageUrl} alt={post.title}
                               className="w-full max-h-48 object-cover rounded-xl mb-3 border border-purple-900/20" />
                           )}
 
@@ -399,8 +399,8 @@ export default function CommunityPage() {
                     className="bg-[#0a0a12] border border-gray-800/80 hover:border-purple-700/50 rounded-2xl p-5 transition group">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-700 to-purple-900 flex items-center justify-center text-lg font-bold flex-shrink-0 overflow-hidden">
-                        {member.image ? (
-                          <img src={member.image} alt={member.name} className="w-12 h-12 object-cover" />
+                        {member.profile?.avatar ? (
+                          <img src={member.profile.avatar} alt={member.name} className="w-12 h-12 object-cover rounded-full" />
                         ) : (
                           member.name?.charAt(0)
                         )}

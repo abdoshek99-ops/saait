@@ -10,8 +10,14 @@ export function middleware(req: NextRequest) {
 
     if (!token || token !== ADMIN_PASSWORD) {
       const loginUrl = new URL('/admin/login', req.url)
+      // احذف الكوكي القديم وأعد التوجيه لصفحة تسجيل الدخول
       const response = NextResponse.redirect(loginUrl)
-      response.cookies.delete('admin_token')
+      response.cookies.set('admin_token', '', {
+        maxAge: 0,
+        path: '/',
+        secure: true,
+        sameSite: 'none',
+      })
       return response
     }
   }

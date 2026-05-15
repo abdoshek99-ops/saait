@@ -5,14 +5,15 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
     const existing = await prisma.projectMember.findFirst({
-      where: { userId: session.user.id, projectId: params.id }
+      where: { userId: session.user.id, projectId: id }
     })
 
     if (existing) {
@@ -20,7 +21,7 @@ export async function POST(
     }
 
     await prisma.projectMember.create({
-      data: { userId: session.user.id, projectId: params.id, role: 'member' }
+      data: { userId: session.user.id, projectId: id, role: 'member' }
     })
 
     await prisma.user.update({

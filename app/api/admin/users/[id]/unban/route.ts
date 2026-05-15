@@ -5,21 +5,22 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session || session.user?.role !== 'admin') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
     }
 
-    const user = await prisma.user.findUnique({ where: { id: params.id } })
+    const user = await prisma.user.findUnique({ where: { id: id } })
     if (!user) {
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
     }
 
     await prisma.user.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { banned: true }
     })
 

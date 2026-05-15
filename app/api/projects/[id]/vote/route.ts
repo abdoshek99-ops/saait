@@ -5,14 +5,15 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
     await prisma.project.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { votes: { increment: 1 } }
     })
 

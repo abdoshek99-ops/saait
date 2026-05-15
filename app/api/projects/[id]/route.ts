@@ -5,11 +5,12 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         owner: {
           select: {
@@ -49,7 +50,7 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -59,7 +60,7 @@ export async function PUT(
     const { title, description, field, codeUrl, demoUrl, progress, status } = body
 
     const project = await prisma.project.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!project || project.ownerId !== session.user.id) {
@@ -67,7 +68,7 @@ export async function PUT(
     }
 
     const updated = await prisma.project.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         title, description, field,
         codeUrl: codeUrl || null,

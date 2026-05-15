@@ -5,9 +5,10 @@ import { authOptions } from '@/lib/auth'
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
@@ -22,7 +23,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'غير مصرح بالحذف' }, { status: 403 })
     }
 
-    await prisma.aITool.delete({ where: { id: params.id } })
+    await prisma.aITool.delete({ where: { id: id } })
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: 'server error' }, { status: 500 })

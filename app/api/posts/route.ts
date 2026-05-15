@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { title, content, category, tags } = body
+    const { title, content, category, tags, imageUrl } = body
 
     if (!title || !content || !category) {
       return NextResponse.json({ error: 'missing fields' }, { status: 400 })
@@ -51,7 +51,8 @@ export async function POST(req: Request) {
         content,
         category,
         tags: tags || [],
-        authorId: session.user.id,
+        imageUrl: imageUrl || null,
+        authorId: (session.user as any).id,
       },
     })
 
@@ -60,4 +61,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'server error' }, { status: 500 })
   }
 }
-

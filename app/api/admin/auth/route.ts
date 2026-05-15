@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 const ADMIN_USERNAME = 'saait'
 const ADMIN_PASSWORD = 'abda0987654321mmzz0p@saait'
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set('admin_token', ADMIN_PASSWORD, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,          // دائماً true حتى في Railway
+      sameSite: 'none',      // مطلوب مع secure:true عبر Railway proxy
       maxAge: 60 * 60 * 8,
       path: '/',
     })

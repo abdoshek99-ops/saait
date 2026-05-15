@@ -5,9 +5,10 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
@@ -15,7 +16,7 @@ export async function POST(
     if (!content) return NextResponse.json({ error: 'missing content' }, { status: 400 })
 
     const comment = await prisma.comment.create({
-      data: { content, projectId: params.id }
+      data: { content, projectId: id }
     })
 
     await prisma.user.update({

@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { title, description, field, codeUrl, demoUrl } = body
+    const { title, description, field, codeUrl, demoUrl, imageUrl } = body
 
     if (!title || !description || !field) {
       return NextResponse.json({ error: 'Ø§Ù„Ø¹Ù†ÙˆØ§Ù† ÙˆØ§Ù„ÙˆØµÙ ÙˆØ§Ù„Ù…Ø¬Ø§Ù„ Ù…Ø·Ù„ÙˆØ¨Ø©' }, { status: 400 })
@@ -95,6 +95,7 @@ export async function POST(req: Request) {
         field,
         codeUrl:    codeUrl    || null,
         demoUrl:    demoUrl    || null,
+        imageUrl:   imageUrl   || null,
         ownerId:    user.id,
         isApproved: true,
         progress:   0,

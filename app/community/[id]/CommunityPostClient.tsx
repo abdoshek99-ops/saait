@@ -64,8 +64,8 @@ export default function CommunityPostClient({ post }: { post: any }) {
 
           <div className="flex items-center gap-3 mb-5">
             <div className="w-12 h-12 rounded-full bg-purple-700 flex items-center justify-center font-bold text-lg overflow-hidden flex-shrink-0">
-              {post.author?.image
-                ? <img src={post.author.image} alt={post.author.name} className="w-12 h-12 object-cover" />
+              {post.author?.profile?.avatar
+                ? <img src={post.author.profile.avatar} alt={post.author.name} className="w-12 h-12 object-cover" />
                 : post.author?.name?.charAt(0)
               }
             </div>
@@ -87,9 +87,9 @@ export default function CommunityPostClient({ post }: { post: any }) {
             {post.title}
           </h1>
 
-          {post.image && (
+          {post.imageUrl && (
             <div className="mb-6 rounded-2xl overflow-hidden border border-purple-900/20">
-              <img src={post.image} alt={post.title} className="w-full max-h-96 object-cover" />
+              <img src={post.imageUrl} alt={post.title} className="w-full max-h-96 object-cover" />
             </div>
           )}
 
