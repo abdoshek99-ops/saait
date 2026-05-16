@@ -8,6 +8,10 @@ export async function GET(
   try {
     const { id } = await params
 
+    if (!id) {
+      return NextResponse.json({ error: 'معرف المستخدم مطلوب' }, { status: 400 })
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -17,13 +21,12 @@ export async function GET(
         role: true,
         points: true,
         banned: true,
-        emailVerified: true,
         createdAt: true,
         profile: true,
         skills: {
           include: {
-            skill: { select: { name: true, category: true } }
-          }
+            skill: { select: { name: true, category: true } },
+          },
         },
         ownedProjects: {
           orderBy: { createdAt: 'desc' },
@@ -35,23 +38,22 @@ export async function GET(
             status: true,
             progress: true,
             votes: true,
+            imageUrl: true,
             createdAt: true,
-            _count: { select: { members: true, comments: true } }
-          }
+            _count: { select: { members: true, comments: true } },
+          },
         },
         badges: {
-          include: {
-            badge: true
-          }
+          include: { badge: true },
         },
         _count: {
           select: {
             ownedProjects: true,
             posts: true,
             sentMessages: true,
-          }
-        }
-      }
+          },
+        },
+      },
     })
 
     if (!user) {
@@ -61,6 +63,6 @@ export async function GET(
     return NextResponse.json(user)
   } catch (error) {
     console.error('GET user profile error:', error)
-    return NextResponse.json({ error: 'خطأ في الخادم' }, { status: 500 })
+    return NextResponse.json({ error: 'حدث خطأ في الخادم' }, { status: 500 })
   }
 }

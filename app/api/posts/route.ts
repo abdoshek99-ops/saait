@@ -9,9 +9,7 @@ export async function GET(req: Request) {
     const category = searchParams.get('category')
 
     const posts = await prisma.post.findMany({
-      where: {
-        ...(category && { category }),
-      },
+      where: { ...(category && { category }) },
       include: {
         author: {
           select: {
@@ -27,7 +25,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json(posts)
   } catch (error) {
-    return NextResponse.json({ error: 'server error' }, { status: 500 })
+    console.error('GET posts error:', error)
+    return NextResponse.json({ error: 'حدث خطأ في الخادم' }, { status: 500 })
   }
 }
 
@@ -35,14 +34,22 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'يجب تسجيل الدخول أولاً' }, { status: 401 })
     }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user!.email! },
+      select: { id: true, banned: true },
+    })
+
+    if (!user) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
+    if (user.banned) return NextResponse.json({ error: 'حسابك محظور' }, { status: 403 })
 
     const body = await req.json()
     const { title, content, category, tags, imageUrl } = body
 
     if (!title || !content || !category) {
-      return NextResponse.json({ error: 'missing fields' }, { status: 400 })
+      return NextResponse.json({ error: 'العنوان والمحتوى والتصنيف مطلوبة' }, { status: 400 })
     }
 
     const post = await prisma.post.create({
@@ -50,14 +57,15 @@ export async function POST(req: Request) {
         title,
         content,
         category,
-        tags: tags || [],
+        tags:     tags     || [],
         imageUrl: imageUrl || null,
-        authorId: (session.user as any).id,
+        authorId: user.id,
       },
     })
 
     return NextResponse.json(post, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'server error' }, { status: 500 })
+    console.error('POST post error:', error)
+    return NextResponse.json({ error: 'حدث خطأ في الخادم' }, { status: 500 })
   }
 }
